@@ -168,14 +168,12 @@ class SSDMonitorApplet extends Applet.TextIconApplet {
         for (const {item, value, label} of this._deviceChoices || []) {
             const selected = value === this._selectedDevice;
             item.setLabel(`${selected ? '✓ ' : ''}${label}`);
-            item.setOrnament(PopupMenu.OrnamentType.DOT, selected);
-            item.setActive(selected);
+            item.actor.set_style(selected ? 'background-color: rgba(127, 127, 127, 0.22);' : '');
         }
         for (const {item, value, label} of this._unitChoices || []) {
             const selected = value === this._temperatureUnit;
             item.setLabel(`${selected ? '✓ ' : ''}${label}`);
-            item.setOrnament(PopupMenu.OrnamentType.DOT, selected);
-            item.setActive(selected);
+            item.actor.set_style(selected ? 'background-color: rgba(127, 127, 127, 0.22);' : '');
         }
     }
 
