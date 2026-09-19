@@ -27,11 +27,11 @@ function formatRate(bytesPerSecond) {
 }
 
 function valueOrDash(value, suffix = '') {
-    return value === null || value === undefined ? '—' : `${value}${suffix}`;
+    return value === null || value === undefined ? 'Not reported' : `${value}${suffix}`;
 }
 
 function formatTemperature(celsius, unit) {
-    if (typeof celsius !== 'number' || !Number.isFinite(celsius)) return '—';
+    if (typeof celsius !== 'number' || !Number.isFinite(celsius)) return 'Not reported';
     if (unit === 'imperial') return `${Math.round((celsius * 9 / 5 + 32) * 10) / 10}°F`;
     return `${celsius}°C`;
 }

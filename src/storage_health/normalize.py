@@ -52,6 +52,9 @@ def normalize(
     smart_protocol = _nested(smart, "device", "protocol")
     if isinstance(smart_protocol, str):
         smart_protocol = smart_protocol.lower()
+    # Some USB flash adapters report a placeholder 0 C in SCSI mode.
+    if smart_protocol == "scsi" and smart_temp == 0:
+        smart_temp = None
     model = _first(smart and smart.get("model_name"), sysfs.get("model"))
     bx500 = isinstance(model, str) and model.startswith("CT") and "BX500SSD" in model
     lifetime_used = _ata_raw(smart, 202) if bx500 else None

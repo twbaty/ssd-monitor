@@ -74,6 +74,18 @@ class NormalizationTests(unittest.TestCase):
         self.assertIsNone(unrelated["health"]["lifetime_remaining_percent"])
         self.assertIsNone(unrelated["errors"]["reallocated_nand_blocks"])
 
+    def test_scsi_zero_temperature_is_not_reported(self) -> None:
+        device = PhysicalDevice("sdb", "/dev/sdb", "/sys/devices/sdb", "8:16")
+        smart = {
+            "device": {"protocol": "SCSI"},
+            "smart_status": {"passed": True},
+            "temperature": {"current": 0},
+        }
+        record = normalize(device, {}, smart, None, []).to_dict()
+
+        self.assertTrue(record["health"]["smart_passed"])
+        self.assertIsNone(record["temperature"]["celsius"])
+
 
 if __name__ == "__main__":
     unittest.main()
