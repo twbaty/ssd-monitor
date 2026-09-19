@@ -61,6 +61,24 @@ Use `--data-dir PATH` with both commands to choose another snapshot directory.
 Use `--port PORT` with `dashboard` if port 8765 is occupied. A single snapshot
 shows the current reading; trends appear as more snapshots are recorded.
 
+## Cinnamon panel applet
+
+The Cinnamon applet in `cinnamon/ssd-monitor@local/` shows live disk read and
+write rates in the panel. Click it for SMART status, lifetime remaining,
+temperature, error counters, and the age of the latest recorded snapshot.
+Read/write rates refresh every two seconds from Linux disk counters. SMART
+details come from the private snapshots made by `storage-health record`.
+The applet marks a snapshot stale after 24 hours and hides its lifetime
+percentage from the panel label until a new snapshot is recorded.
+
+To install it for the current user, copy the `ssd-monitor@local` folder into
+`~/.local/share/cinnamon/applets/`, then add **SSD Monitor** to the panel in
+Cinnamon's Applets settings. Run `sudo .venv/bin/storage-health record` to
+refresh the SMART details. The panel applet itself does not require root.
+
+The collector's normalized JSON snapshots are separate from the Cinnamon UI,
+so a future Windows system tray client can consume equivalent telemetry.
+
 Run the test suite without additional test dependencies:
 
 ```bash

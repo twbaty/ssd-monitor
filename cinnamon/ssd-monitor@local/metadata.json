@@ -1,0 +1,7 @@
+{
+  "uuid": "ssd-monitor@local",
+  "name": "SSD Monitor",
+  "description": "Panel read/write activity and SSD health from local snapshots",
+  "icon": "drive-harddisk-symbolic",
+  "max-instances": 1
+}
