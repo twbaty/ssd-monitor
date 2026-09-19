@@ -7,6 +7,9 @@ const ByteArray = imports.byteArray;
 const HISTORY_DIR = GLib.build_filenamev([
     GLib.get_home_dir(), '.local', 'share', 'ssd-monitor'
 ]);
+const SELECTED_DEVICE_FILE = GLib.build_filenamev([
+    GLib.get_user_config_dir(), 'ssd-monitor-selected-device'
+]);
 
 function readText(path) {
     const [ok, bytes] = GLib.file_get_contents(path);
@@ -35,12 +38,19 @@ class SSDMonitorApplet extends Applet.TextIconApplet {
         this.menu = new Applet.AppletPopupMenu(this, orientation);
         this.menuManager = new PopupMenu.PopupMenuManager(this);
         this.menuManager.addMenu(this.menu);
+        this._deviceMenu = new PopupMenu.PopupSubMenuMenuItem('Select drive');
+        this.menu.addMenuItem(this._deviceMenu);
         this._rows = {};
         for (const key of ['drive', 'smart', 'lifetime', 'temperature', 'read', 'write',
                            'reallocated', 'uncorrectable', 'crc', 'recorded']) {
             const item = new PopupMenu.PopupMenuItem('');
             this.menu.addMenuItem(item);
             this._rows[key] = item;
+        }
+        try {
+            this._selectedDevice = readText(SELECTED_DEVICE_FILE).trim();
+        } catch (error) {
+            this._selectedDevice = null;
         }
         this._previous = null;
         this._update();
@@ -50,12 +60,12 @@ class SSDMonitorApplet extends Applet.TextIconApplet {
         });
     }
 
-    _latestRecord() {
+    _latestRecords() {
         let dir;
         try {
             dir = GLib.Dir.open(HISTORY_DIR, 0);
         } catch (error) {
-            return null;
+            return [];
         }
         const names = [];
         let name;
@@ -67,14 +77,51 @@ class SSDMonitorApplet extends Applet.TextIconApplet {
         for (let index = names.length - 1; index >= 0; index--) {
             try {
                 const records = JSON.parse(readText(GLib.build_filenamev([HISTORY_DIR, names[index]])));
-                if (Array.isArray(records) && records.length > 0) {
-                    return records.find(record => record.device?.path === '/dev/sda') || records[0];
-                }
+                if (Array.isArray(records) && records.length > 0) return records;
             } catch (error) {
                 // Ignore a partial or unrelated file and try the previous snapshot.
             }
         }
-        return null;
+        return [];
+    }
+
+    _physicalDevices() {
+        const devices = [];
+        try {
+            const dir = GLib.Dir.open('/sys/class/block', 0);
+            let name;
+            while ((name = dir.read_name()) !== null) {
+                if (!/^(sd[a-z]+|nvme\d+n\d+|mmcblk\d+)$/.test(name)) continue;
+                const path = `/sys/class/block/${name}`;
+                if (GLib.file_test(`${path}/partition`, GLib.FileTest.EXISTS)) continue;
+                let model = name;
+                try { model = readText(`${path}/device/model`).trim(); } catch (error) { /* optional */ }
+                devices.push({path: `/dev/${name}`, model});
+            }
+            dir.close();
+        } catch (error) {
+            return devices;
+        }
+        return devices.sort((a, b) => a.path.localeCompare(b.path));
+    }
+
+    _updateDeviceMenu(devices) {
+        this._deviceMenu.menu.removeAll();
+        if (!devices.length) {
+            this._deviceMenu.menu.addMenuItem(new PopupMenu.PopupMenuItem('No physical drives found'));
+            return;
+        }
+        for (const device of devices) {
+            const selected = device.path === this._selectedDevice ? '✓ ' : '';
+            const item = new PopupMenu.PopupMenuItem(`${selected}${device.path} · ${device.model}`);
+            item.connect('activate', () => {
+                this._selectedDevice = device.path;
+                this._previous = null;
+                try { GLib.file_set_contents(SELECTED_DEVICE_FILE, device.path); } catch (error) { global.logError(error); }
+                this._update();
+            });
+            this._deviceMenu.menu.addMenuItem(item);
+        }
     }
 
     _diskRates(devicePath) {
@@ -104,8 +151,15 @@ class SSDMonitorApplet extends Applet.TextIconApplet {
 
     _update() {
         try {
-            const record = this._latestRecord();
-            const device = record?.device?.path || '/dev/sda';
+            const records = this._latestRecords();
+            const devices = this._physicalDevices();
+            if (!this._selectedDevice) {
+                this._selectedDevice = devices.find(item => item.path === '/dev/sda')?.path ||
+                    devices[0]?.path || records[0]?.device?.path || null;
+            }
+            const device = this._selectedDevice;
+            const connected = devices.some(item => item.path === device);
+            const record = records.find(item => item.device?.path === device);
             const [read, write] = this._diskRates(device);
             const health = record?.health || {};
             const errors = record?.errors || {};
@@ -116,11 +170,13 @@ class SSDMonitorApplet extends Applet.TextIconApplet {
             const fresh = age >= 0 && age < 24 * 60 * 60 * 1000;
             const wear = fresh && lifetime !== null && lifetime !== undefined ? ` · ${lifetime}%` : '';
 
-            this.set_applet_label(`↓ ${formatRate(read)}  ↑ ${formatRate(write)}${wear}`);
-            this.set_applet_icon_symbolic_name(health.smart_passed === false ?
+            this.set_applet_label(connected ?
+                `${device.slice(5)} ↓ ${formatRate(read)}  ↑ ${formatRate(write)}${wear}` :
+                `${device || 'SSD'} disconnected`);
+            this.set_applet_icon_symbolic_name(!connected || health.smart_passed === false ?
                 'dialog-warning-symbolic' : 'drive-harddisk-symbolic');
-            this.set_applet_tooltip(`SSD Monitor · ${device} · snapshot ${fresh ? 'current' : 'stale or missing'}`);
-            this._setRow('drive', `${record?.identity?.model || 'Drive'} (${device})`);
+            this.set_applet_tooltip(`SSD Monitor · ${device || 'no drive'} · ${connected ? 'connected' : 'disconnected'} · snapshot ${fresh ? 'current' : 'stale or missing'}`);
+            this._setRow('drive', `${record?.identity?.model || devices.find(item => item.path === device)?.model || 'Drive'} (${device || 'none'})`);
             this._setRow('smart', `SMART: ${health.smart_passed === true ? 'passed' : health.smart_passed === false ? 'warning' : 'unknown'}`);
             this._setRow('lifetime', `Lifetime remaining: ${valueOrDash(lifetime, '%')}`);
             this._setRow('temperature', `Temperature: ${valueOrDash(temperature, '°C')}`);
@@ -138,6 +194,7 @@ class SSDMonitorApplet extends Applet.TextIconApplet {
 
     on_applet_clicked() {
         this._update();
+        this._updateDeviceMenu(this._physicalDevices());
         this.menu.toggle();
     }
 

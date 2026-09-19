@@ -66,6 +66,12 @@ shows the current reading; trends appear as more snapshots are recorded.
 The Cinnamon applet in `cinnamon/ssd-monitor@local/` shows live disk read and
 write rates in the panel. Click it for SMART status, lifetime remaining,
 temperature, error counters, and the age of the latest recorded snapshot.
+Use **Select drive** in its menu to switch between attached drives. USB drives
+and additional SSDs appear when Linux exposes them as physical block devices;
+the choice is remembered. If a selected drive is unplugged, the panel shows
+it as disconnected until another drive is selected. Some USB enclosures do
+not pass SMART data through, so read/write rates can be available while
+health fields remain unknown.
 Read/write rates refresh every two seconds from Linux disk counters. SMART
 details come from the private snapshots made by `storage-health record`.
 The applet marks a snapshot stale after 24 hours and hides its lifetime
