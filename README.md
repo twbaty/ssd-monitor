@@ -63,22 +63,22 @@ shows the current reading; trends appear as more snapshots are recorded.
 
 ## Cinnamon panel applet
 
-The Cinnamon applet in `cinnamon/ssd-monitor@local/` shows live disk read and
-write rates in the panel. Click it for SMART status, lifetime remaining,
-temperature, error counters, and the age of the latest recorded snapshot.
+The Cinnamon applet in `cinnamon/ssd-monitor@local/` uses a fixed-size panel
+icon. Click it for live disk read and write rates, SMART status, lifetime
+remaining, temperature, error counters, and the age of the latest recorded
+snapshot.
 Use **Select drive** in its menu to switch between attached drives. USB drives
 and additional SSDs appear when Linux exposes them as physical block devices;
-the choice is remembered. If a selected drive is unplugged, the panel shows
-it as disconnected until another drive is selected. Some USB enclosures do
-not pass SMART data through, so read/write rates can be available while
-health fields remain unknown.
+the choice is remembered. If a selected drive is unplugged, the icon changes
+to a warning and its tooltip says disconnected until another drive is selected.
+Some USB enclosures do not pass SMART data through, so read/write rates can be
+available while health fields remain unknown.
 Use **Temperature units** in the applet menu to choose metric (°C) or imperial
-(°F). The choice is remembered and applies to the panel and details menu.
+(°F). The choice is remembered and applies to the details menu.
 Read/write activity remains in bytes per second in either setting.
 Read/write rates refresh every two seconds from Linux disk counters. SMART
 details come from the private snapshots made by `storage-health record`.
-The applet marks a snapshot stale after 24 hours and hides its lifetime
-percentage from the panel label until a new snapshot is recorded.
+The tooltip marks a snapshot stale after 24 hours.
 
 To install it for the current user, copy the `ssd-monitor@local` folder into
 `~/.local/share/cinnamon/applets/`, then add **SSD Monitor** to the panel in

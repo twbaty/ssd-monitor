@@ -41,7 +41,7 @@ class SSDMonitorApplet extends Applet.TextIconApplet {
         super(orientation, panelHeight, instanceId);
         this.setAllowedLayout(Applet.AllowedLayout.BOTH);
         this.set_applet_icon_symbolic_name('drive-harddisk-symbolic');
-        this.set_applet_label('SSD ↓ — ↑ —');
+        this.set_applet_label('');
         this.set_applet_tooltip('SSD Monitor: loading disk activity');
 
         this.menu = new Applet.AppletPopupMenu(this, orientation);
@@ -194,23 +194,17 @@ class SSDMonitorApplet extends Applet.TextIconApplet {
             const health = record?.health || {};
             const errors = record?.errors || {};
             const temperature = record?.temperature?.celsius;
-            const lifetime = health.lifetime_remaining_percent;
             const timestamp = record?.collection?.timestamp_utc;
             const age = timestamp ? Date.now() - Date.parse(timestamp) : Infinity;
             const fresh = age >= 0 && age < 24 * 60 * 60 * 1000;
-            const wear = fresh && lifetime !== null && lifetime !== undefined ? ` · ${lifetime}%` : '';
             const temperatureText = formatTemperature(temperature, this._temperatureUnit);
-            const panelTemperature = fresh && temperatureText !== '—' ? ` · ${temperatureText}` : '';
-
-            this.set_applet_label(connected ?
-                `${device.slice(5)} ↓ ${formatRate(read)}  ↑ ${formatRate(write)}${panelTemperature}${wear}` :
-                `${device || 'SSD'} disconnected`);
+            this.set_applet_label('');
             this.set_applet_icon_symbolic_name(!connected || health.smart_passed === false ?
                 'dialog-warning-symbolic' : 'drive-harddisk-symbolic');
             this.set_applet_tooltip(`SSD Monitor · ${device || 'no drive'} · ${connected ? 'connected' : 'disconnected'} · snapshot ${fresh ? 'current' : 'stale or missing'}`);
             this._setRow('drive', `${record?.identity?.model || devices.find(item => item.path === device)?.model || 'Drive'} (${device || 'none'})`);
             this._setRow('smart', `SMART: ${health.smart_passed === true ? 'passed' : health.smart_passed === false ? 'warning' : 'unknown'}`);
-            this._setRow('lifetime', `Lifetime remaining: ${valueOrDash(lifetime, '%')}`);
+            this._setRow('lifetime', `Lifetime remaining: ${valueOrDash(health.lifetime_remaining_percent, '%')}`);
             this._setRow('temperature', `Temperature: ${temperatureText}`);
             this._setRow('read', `Read: ${formatRate(read)}`);
             this._setRow('write', `Write: ${formatRate(write)}`);
@@ -220,7 +214,7 @@ class SSDMonitorApplet extends Applet.TextIconApplet {
             this._setRow('recorded', `Recorded: ${timestamp ? new Date(timestamp).toLocaleString() : 'No snapshot yet'}`);
         } catch (error) {
             global.logError(error);
-            this.set_applet_label('SSD unavailable');
+            this.set_applet_icon_symbolic_name('dialog-warning-symbolic');
         }
     }
 
