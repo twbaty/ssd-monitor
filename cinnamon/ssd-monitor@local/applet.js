@@ -112,7 +112,9 @@ class SSDMonitorApplet extends Applet.TextIconApplet {
                 if (GLib.file_test(`${path}/partition`, GLib.FileTest.EXISTS)) continue;
                 let model = name;
                 try { model = readText(`${path}/device/model`).trim(); } catch (error) { /* optional */ }
-                devices.push({path: `/dev/${name}`, model});
+                let removable = false;
+                try { removable = readText(`${path}/removable`).trim() === '1'; } catch (error) { /* optional */ }
+                devices.push({path: `/dev/${name}`, model, removable});
             }
             dir.close();
         } catch (error) {
@@ -183,9 +185,14 @@ class SSDMonitorApplet extends Applet.TextIconApplet {
         try {
             const records = this._latestRecords();
             const devices = this._physicalDevices();
-            if (!this._selectedDevice) {
-                this._selectedDevice = devices.find(item => item.path === '/dev/sda')?.path ||
-                    devices[0]?.path || records[0]?.device?.path || null;
+            if (!devices.some(item => item.path === this._selectedDevice)) {
+                this._selectedDevice = devices.find(item => !item.removable)?.path ||
+                    devices[0]?.path || null;
+                this._previous = null;
+                if (this._selectedDevice) {
+                    try { GLib.file_set_contents(SELECTED_DEVICE_FILE, this._selectedDevice); }
+                    catch (error) { global.logError(error); }
+                }
             }
             const device = this._selectedDevice;
             const connected = devices.some(item => item.path === device);
