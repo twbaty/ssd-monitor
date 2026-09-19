@@ -15,6 +15,12 @@ Linux telemetry may come from:
 
 Missing or unsupported attributes are represented explicitly and are never guessed.
 
+For Crucial BX500 drives, the scan also reports lifetime remaining from ATA
+SMART attribute 202 and raw counts for reallocated NAND blocks (5), reported
+uncorrectable errors (187), and SATA interface CRC errors (199). These fields
+remain `null` for drives without this supported mapping. The lifetime value is
+derived from attribute 202's raw percent used, as documented by smartmontools.
+
 ## Status
 
 Linux telemetry proof of concept implemented.
