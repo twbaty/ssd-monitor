@@ -42,6 +42,25 @@ python -m pip install .
 sudo .venv/bin/storage-health scan --json
 ```
 
+## Local dashboard
+
+Save a scan, then start the dashboard as your normal user:
+
+```bash
+sudo .venv/bin/storage-health record
+.venv/bin/storage-health dashboard
+```
+
+Open [http://127.0.0.1:8765/](http://127.0.0.1:8765/) on this computer.
+Run `record` again whenever you want another point on the graphs. The page
+reads newly saved scans when refreshed. Snapshot files are stored under
+`~/.local/share/ssd-monitor/` with private file permissions. The dashboard
+listens only on `127.0.0.1` and does not show drive serial numbers.
+
+Use `--data-dir PATH` with both commands to choose another snapshot directory.
+Use `--port PORT` with `dashboard` if port 8765 is occupied. A single snapshot
+shows the current reading; trends appear as more snapshots are recorded.
+
 Run the test suite without additional test dependencies:
 
 ```bash
