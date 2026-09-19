@@ -10,6 +10,9 @@ const HISTORY_DIR = GLib.build_filenamev([
 const SELECTED_DEVICE_FILE = GLib.build_filenamev([
     GLib.get_user_config_dir(), 'ssd-monitor-selected-device'
 ]);
+const UNIT_FILE = GLib.build_filenamev([
+    GLib.get_user_config_dir(), 'ssd-monitor-temperature-unit'
+]);
 
 function readText(path) {
     const [ok, bytes] = GLib.file_get_contents(path);
@@ -27,6 +30,12 @@ function valueOrDash(value, suffix = '') {
     return value === null || value === undefined ? '—' : `${value}${suffix}`;
 }
 
+function formatTemperature(celsius, unit) {
+    if (typeof celsius !== 'number' || !Number.isFinite(celsius)) return '—';
+    if (unit === 'imperial') return `${Math.round((celsius * 9 / 5 + 32) * 10) / 10}°F`;
+    return `${celsius}°C`;
+}
+
 class SSDMonitorApplet extends Applet.TextIconApplet {
     constructor(metadata, orientation, panelHeight, instanceId) {
         super(orientation, panelHeight, instanceId);
@@ -40,6 +49,8 @@ class SSDMonitorApplet extends Applet.TextIconApplet {
         this.menuManager.addMenu(this.menu);
         this._deviceMenu = new PopupMenu.PopupSubMenuMenuItem('Select drive');
         this.menu.addMenuItem(this._deviceMenu);
+        this._unitMenu = new PopupMenu.PopupSubMenuMenuItem('Temperature units');
+        this.menu.addMenuItem(this._unitMenu);
         this._rows = {};
         for (const key of ['drive', 'smart', 'lifetime', 'temperature', 'read', 'write',
                            'reallocated', 'uncorrectable', 'crc', 'recorded']) {
@@ -51,6 +62,11 @@ class SSDMonitorApplet extends Applet.TextIconApplet {
             this._selectedDevice = readText(SELECTED_DEVICE_FILE).trim();
         } catch (error) {
             this._selectedDevice = null;
+        }
+        try {
+            this._temperatureUnit = readText(UNIT_FILE).trim() === 'imperial' ? 'imperial' : 'metric';
+        } catch (error) {
+            this._temperatureUnit = 'metric';
         }
         this._previous = null;
         this._update();
@@ -124,6 +140,20 @@ class SSDMonitorApplet extends Applet.TextIconApplet {
         }
     }
 
+    _updateUnitMenu() {
+        this._unitMenu.menu.removeAll();
+        for (const [unit, label] of [['metric', 'Metric (°C)'], ['imperial', 'Imperial (°F)']]) {
+            const selected = unit === this._temperatureUnit ? '✓ ' : '';
+            const item = new PopupMenu.PopupMenuItem(`${selected}${label}`);
+            item.connect('activate', () => {
+                this._temperatureUnit = unit;
+                try { GLib.file_set_contents(UNIT_FILE, unit); } catch (error) { global.logError(error); }
+                this._update();
+            });
+            this._unitMenu.menu.addMenuItem(item);
+        }
+    }
+
     _diskRates(devicePath) {
         if (!devicePath || !/^\/dev\/[a-zA-Z0-9_-]+$/.test(devicePath)) return [null, null];
         const name = devicePath.slice(5);
@@ -169,9 +199,11 @@ class SSDMonitorApplet extends Applet.TextIconApplet {
             const age = timestamp ? Date.now() - Date.parse(timestamp) : Infinity;
             const fresh = age >= 0 && age < 24 * 60 * 60 * 1000;
             const wear = fresh && lifetime !== null && lifetime !== undefined ? ` · ${lifetime}%` : '';
+            const temperatureText = formatTemperature(temperature, this._temperatureUnit);
+            const panelTemperature = fresh && temperatureText !== '—' ? ` · ${temperatureText}` : '';
 
             this.set_applet_label(connected ?
-                `${device.slice(5)} ↓ ${formatRate(read)}  ↑ ${formatRate(write)}${wear}` :
+                `${device.slice(5)} ↓ ${formatRate(read)}  ↑ ${formatRate(write)}${panelTemperature}${wear}` :
                 `${device || 'SSD'} disconnected`);
             this.set_applet_icon_symbolic_name(!connected || health.smart_passed === false ?
                 'dialog-warning-symbolic' : 'drive-harddisk-symbolic');
@@ -179,7 +211,7 @@ class SSDMonitorApplet extends Applet.TextIconApplet {
             this._setRow('drive', `${record?.identity?.model || devices.find(item => item.path === device)?.model || 'Drive'} (${device || 'none'})`);
             this._setRow('smart', `SMART: ${health.smart_passed === true ? 'passed' : health.smart_passed === false ? 'warning' : 'unknown'}`);
             this._setRow('lifetime', `Lifetime remaining: ${valueOrDash(lifetime, '%')}`);
-            this._setRow('temperature', `Temperature: ${valueOrDash(temperature, '°C')}`);
+            this._setRow('temperature', `Temperature: ${temperatureText}`);
             this._setRow('read', `Read: ${formatRate(read)}`);
             this._setRow('write', `Write: ${formatRate(write)}`);
             this._setRow('reallocated', `Reallocated NAND blocks: ${valueOrDash(errors.reallocated_nand_blocks)}`);
@@ -195,6 +227,7 @@ class SSDMonitorApplet extends Applet.TextIconApplet {
     on_applet_clicked() {
         this._update();
         this._updateDeviceMenu(this._physicalDevices());
+        this._updateUnitMenu();
         this.menu.toggle();
     }
 

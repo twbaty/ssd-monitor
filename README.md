@@ -72,6 +72,9 @@ the choice is remembered. If a selected drive is unplugged, the panel shows
 it as disconnected until another drive is selected. Some USB enclosures do
 not pass SMART data through, so read/write rates can be available while
 health fields remain unknown.
+Use **Temperature units** in the applet menu to choose metric (°C) or imperial
+(°F). The choice is remembered and applies to the panel and details menu.
+Read/write activity remains in bytes per second in either setting.
 Read/write rates refresh every two seconds from Linux disk counters. SMART
 details come from the private snapshots made by `storage-health record`.
 The applet marks a snapshot stale after 24 hours and hides its lifetime
