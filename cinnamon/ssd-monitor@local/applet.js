@@ -132,6 +132,7 @@ class SSDMonitorApplet extends Applet.TextIconApplet {
         for (const device of devices) {
             const selected = device.path === this._selectedDevice ? '✓ ' : '';
             const item = new PopupMenu.PopupMenuItem(`${selected}${device.path} · ${device.model}`);
+            item.activate = event => PopupMenu.PopupBaseMenuItem.prototype.activate.call(item, event, true);
             item.connect('activate', () => {
                 this._selectedDevice = device.path;
                 this._previous = null;
@@ -147,6 +148,7 @@ class SSDMonitorApplet extends Applet.TextIconApplet {
         for (const [unit, label] of [['metric', 'Metric (°C)'], ['imperial', 'Imperial (°F)']]) {
             const selected = unit === this._temperatureUnit ? '✓ ' : '';
             const item = new PopupMenu.PopupMenuItem(`${selected}${label}`);
+            item.activate = event => PopupMenu.PopupBaseMenuItem.prototype.activate.call(item, event, true);
             item.connect('activate', () => {
                 this._temperatureUnit = unit;
                 try { GLib.file_set_contents(UNIT_FILE, unit); } catch (error) { global.logError(error); }
