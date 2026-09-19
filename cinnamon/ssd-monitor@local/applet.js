@@ -125,36 +125,57 @@ class SSDMonitorApplet extends Applet.TextIconApplet {
 
     _updateDeviceMenu(devices) {
         this._deviceMenu.menu.removeAll();
+        this._deviceChoices = [];
         if (!devices.length) {
             this._deviceMenu.menu.addMenuItem(new PopupMenu.PopupMenuItem('No physical drives found'));
             return;
         }
         for (const device of devices) {
-            const selected = device.path === this._selectedDevice ? '✓ ' : '';
-            const item = new PopupMenu.PopupMenuItem(`${selected}${device.path} · ${device.model}`);
+            const item = new PopupMenu.PopupMenuItem('');
             item.activate = event => PopupMenu.PopupBaseMenuItem.prototype.activate.call(item, event, true);
             item.connect('activate', () => {
                 this._selectedDevice = device.path;
                 this._previous = null;
                 try { GLib.file_set_contents(SELECTED_DEVICE_FILE, device.path); } catch (error) { global.logError(error); }
                 this._update();
+                this._syncChoiceHighlights();
             });
             this._deviceMenu.menu.addMenuItem(item);
+            this._deviceChoices.push({item, value: device.path, label: `${device.path} · ${device.model}`});
         }
+        this._syncChoiceHighlights();
     }
 
     _updateUnitMenu() {
         this._unitMenu.menu.removeAll();
+        this._unitChoices = [];
         for (const [unit, label] of [['metric', 'Metric (°C)'], ['imperial', 'Imperial (°F)']]) {
-            const selected = unit === this._temperatureUnit ? '✓ ' : '';
-            const item = new PopupMenu.PopupMenuItem(`${selected}${label}`);
+            const item = new PopupMenu.PopupMenuItem('');
             item.activate = event => PopupMenu.PopupBaseMenuItem.prototype.activate.call(item, event, true);
             item.connect('activate', () => {
                 this._temperatureUnit = unit;
                 try { GLib.file_set_contents(UNIT_FILE, unit); } catch (error) { global.logError(error); }
                 this._update();
+                this._syncChoiceHighlights();
             });
             this._unitMenu.menu.addMenuItem(item);
+            this._unitChoices.push({item, value: unit, label});
+        }
+        this._syncChoiceHighlights();
+    }
+
+    _syncChoiceHighlights() {
+        for (const {item, value, label} of this._deviceChoices || []) {
+            const selected = value === this._selectedDevice;
+            item.setLabel(`${selected ? '✓ ' : ''}${label}`);
+            item.setOrnament(PopupMenu.OrnamentType.DOT, selected);
+            item.setActive(selected);
+        }
+        for (const {item, value, label} of this._unitChoices || []) {
+            const selected = value === this._temperatureUnit;
+            item.setLabel(`${selected ? '✓ ' : ''}${label}`);
+            item.setOrnament(PopupMenu.OrnamentType.DOT, selected);
+            item.setActive(selected);
         }
     }
 
