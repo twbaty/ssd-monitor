@@ -86,7 +86,31 @@ Cinnamon's Applets settings. Run `sudo .venv/bin/storage-health record` to
 refresh the SMART details. The panel applet itself does not require root.
 
 The collector's normalized JSON snapshots are separate from the Cinnamon UI,
-so a future Windows system tray client can consume equivalent telemetry.
+which lets the Windows tray companion use the same health fields.
+
+## Windows system tray
+
+The Windows tray companion lives in `src/storage_health/windows_tray.py`. Its
+icon stays a fixed size; right-click it for live per-disk read/write rates,
+SMART health, temperature, wear, error counts, drive selection, and Celsius or
+Fahrenheit. It remembers the selected drive and units. Physical disk identity
+comes directly from the Windows storage API. SMART readings come from
+`smartctl` when it is installed and can access the drive. Missing or ambiguous
+SMART data is shown as unknown rather than assigned to the wrong disk.
+
+On the Windows computer, from PowerShell in a clone of this repository:
+
+```powershell
+py -m venv .venv
+.\.venv\Scripts\python.exe -m pip install ".[windows]"
+.\.venv\Scripts\ssd-monitor-tray.exe
+```
+
+The tray launcher has no console window. Install smartmontools separately for
+SMART health; live read/write rates work without it. If rates are unavailable,
+Windows may need its physical disk performance counters enabled and a reboot.
+Run the tray once on the Windows computer before relying on its health display:
+Windows permissions, USB bridges, and disk counter names vary by system.
 
 Run the test suite without additional test dependencies:
 
