@@ -37,13 +37,16 @@ def normalize(
     nvme_temp = _first(_nested(nvme, "temperature"), _nested(nvme, "composite_temperature"))
     passed = _nested(smart, "smart_status", "passed")
     critical_warning = _nested(nvme, "critical_warning")
+    smart_protocol = _nested(smart, "device", "protocol")
+    if isinstance(smart_protocol, str):
+        smart_protocol = smart_protocol.lower()
 
     return TelemetryRecord(
         device={
             "path": device.path,
             "name": device.name,
             "major_minor": device.major_minor,
-            "transport": device.transport,
+            "transport": _first(device.transport, smart_protocol),
             "rotational": sysfs.get("rotational"),
             "capacity_bytes": _first(sysfs.get("size_bytes"), smart and smart.get("user_capacity", {}).get("bytes")),
         },
@@ -75,4 +78,3 @@ def normalize(
             "sources": source_status,
         },
     )
-

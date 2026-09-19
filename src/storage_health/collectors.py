@@ -55,7 +55,15 @@ def collect_smartctl(
         return None, {"source": "smartctl", "status": "unavailable"}
     result = runner(["smartctl", "--all", "--json", device.path], 20)
     payload = result.json()
-    status = "ok" if payload is not None else "error"
+    # smartctl returns a bitmask. Bits 0-2 indicate invocation, device-open,
+    # or command failures; bits 3-7 describe disk-health findings and do not
+    # mean collection itself failed.
+    if payload is None:
+        status = "error"
+    elif result.returncode & 0b111:
+        status = "partial"
+    else:
+        status = "ok"
     return payload, {
         "source": "smartctl",
         "status": status,
@@ -82,4 +90,3 @@ def collect_nvme(
         "exit_code": result.returncode,
         "message": result.stderr.strip() or None,
     }
-

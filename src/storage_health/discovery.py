@@ -6,7 +6,7 @@ from pathlib import Path
 from .models import PhysicalDevice
 
 
-_VIRTUAL_PREFIXES = ("loop", "ram", "zram", "fd")
+_EXCLUDED_PREFIXES = ("loop", "ram", "zram", "fd", "sr")
 
 
 def _read(path: Path) -> str | None:
@@ -27,7 +27,7 @@ def discover_linux(sys_block: Path = Path("/sys/class/block")) -> list[PhysicalD
 
     for entry in entries:
         name = entry.name
-        if name.startswith(_VIRTUAL_PREFIXES) or (entry / "partition").exists():
+        if name.startswith(_EXCLUDED_PREFIXES) or (entry / "partition").exists():
             continue
 
         resolved = Path(os.path.realpath(entry))
@@ -56,4 +56,3 @@ def discover_linux(sys_block: Path = Path("/sys/class/block")) -> list[PhysicalD
         )
 
     return sorted(devices.values(), key=lambda device: device.path)
-

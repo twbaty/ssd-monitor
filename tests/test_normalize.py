@@ -29,13 +29,14 @@ class NormalizationTests(unittest.TestCase):
         self.assertIsNone(record["usage"]["power_on_hours"])
 
     def test_prefers_smart_identity_and_temperature(self) -> None:
-        device = PhysicalDevice("sda", "/dev/sda", "/sys/devices/sda", "8:0", "sata")
+        device = PhysicalDevice("sda", "/dev/sda", "/sys/devices/sda", "8:0")
         record = normalize(
             device,
             {"model": "sysfs model", "size_bytes": 1000},
             {
                 "model_name": "SMART model",
                 "serial_number": "SERIAL",
+                "device": {"protocol": "ATA"},
                 "smart_status": {"passed": True},
                 "temperature": {"current": 33},
                 "power_on_time": {"hours": 120},
@@ -45,6 +46,7 @@ class NormalizationTests(unittest.TestCase):
         ).to_dict()
 
         self.assertEqual(record["identity"]["model"], "SMART model")
+        self.assertEqual(record["device"]["transport"], "ata")
         self.assertTrue(record["health"]["smart_passed"])
         self.assertEqual(record["temperature"]["celsius"], 33)
         self.assertEqual(record["usage"]["power_on_hours"], 120)

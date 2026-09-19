@@ -28,6 +28,11 @@ class DiscoveryTests(unittest.TestCase):
             (loop / "dev").write_text("7:0\n")
             (block / "loop0").symlink_to(loop, target_is_directory=True)
 
+            optical = tmp_path / "devices" / "pci0000:00" / "block" / "sr0"
+            optical.mkdir(parents=True)
+            (optical / "dev").write_text("11:0\n")
+            (block / "sr0").symlink_to(optical, target_is_directory=True)
+
             devices = discover_linux(block)
 
             self.assertEqual(

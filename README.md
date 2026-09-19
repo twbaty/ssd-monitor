@@ -26,8 +26,14 @@ telemetry; the command still emits explicit partial records when either tool is
 missing or access is denied.
 
 ```bash
+mkdir -p ~/code
+cd ~/code
+git clone https://github.com/twbaty/ssd-monitor.git
+cd ssd-monitor
+python3 -m venv .venv
+source .venv/bin/activate
 python -m pip install .
-sudo storage-health scan --json
+sudo .venv/bin/storage-health scan --json
 ```
 
 Run the test suite without additional test dependencies:
