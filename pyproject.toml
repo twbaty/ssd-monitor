@@ -13,13 +13,9 @@ dependencies = []
 
 [project.optional-dependencies]
 dev = ["ruff>=0.6"]
-windows = ["psutil>=5.9", "pystray>=0.19.5", "Pillow>=10"]
 
 [project.scripts]
 storage-health = "storage_health.cli:main"
-
-[project.gui-scripts]
-ssd-monitor-tray = "storage_health.windows_tray:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/storage_health"]

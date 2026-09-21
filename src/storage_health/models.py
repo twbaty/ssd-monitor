@@ -9,8 +9,9 @@ class PhysicalDevice:
     name: str
     path: str
     sys_path: str
-    major_minor: str
+    major_minor: str | None
     transport: str | None = None
+    stable_id: str | None = None
 
 
 @dataclass
@@ -26,4 +27,3 @@ class TelemetryRecord:
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
-

@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import platform
+
 from .collectors import collect_nvme, collect_smartctl, collect_sysfs
 from .discovery import discover_linux
 from .models import TelemetryRecord
 from .normalize import normalize
+from .windows import scan_windows
 
 
 def scan_linux() -> list[TelemetryRecord]:
@@ -16,3 +19,11 @@ def scan_linux() -> list[TelemetryRecord]:
         records.append(normalize(device, sysfs, smart, nvme, sources))
     return records
 
+
+def scan() -> list[TelemetryRecord]:
+    system = platform.system()
+    if system == "Linux":
+        return scan_linux()
+    if system == "Windows":
+        return scan_windows()
+    raise RuntimeError(f"unsupported operating system: {system}")

@@ -26,18 +26,6 @@ def _kelvin_to_celsius(value: Any) -> int | float | None:
     return round(value - 273.15, 2) if value > 200 else value
 
 
-def _ata_raw(smart: dict[str, Any] | None, attribute_id: int) -> int | None:
-    table = _nested(smart, "ata_smart_attributes", "table")
-    if not isinstance(table, list):
-        return None
-    for attribute in table:
-        if not isinstance(attribute, dict) or attribute.get("id") != attribute_id:
-            continue
-        value = _nested(attribute, "raw", "value")
-        return value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else None
-    return None
-
-
 def normalize(
     device: PhysicalDevice,
     sysfs: dict[str, Any],
@@ -52,15 +40,10 @@ def normalize(
     smart_protocol = _nested(smart, "device", "protocol")
     if isinstance(smart_protocol, str):
         smart_protocol = smart_protocol.lower()
-    # Some USB flash adapters report a placeholder 0 C in SCSI mode.
-    if smart_protocol == "scsi" and smart_temp == 0:
-        smart_temp = None
-    model = _first(smart and smart.get("model_name"), sysfs.get("model"))
-    bx500 = isinstance(model, str) and model.startswith("CT") and "BX500SSD" in model
-    lifetime_used = _ata_raw(smart, 202) if bx500 else None
 
     return TelemetryRecord(
         device={
+            "id": _first(device.stable_id, device.major_minor, device.path),
             "path": device.path,
             "name": device.name,
             "major_minor": device.major_minor,
@@ -69,17 +52,17 @@ def normalize(
             "capacity_bytes": _first(sysfs.get("size_bytes"), smart and smart.get("user_capacity", {}).get("bytes")),
         },
         identity={
-            "model": model,
+            "model": _first(smart and smart.get("model_name"), sysfs.get("model")),
             "vendor": sysfs.get("vendor"),
             "serial": _first(smart and smart.get("serial_number"), sysfs.get("serial")),
             "firmware": _first(smart and smart.get("firmware_version"), sysfs.get("firmware")),
         },
         health={
+            "native_status": sysfs.get("native_status"),
             "smart_passed": passed if isinstance(passed, bool) else None,
             "nvme_critical_warning": critical_warning if isinstance(critical_warning, int) else None,
             "percentage_used": _first(_nested(nvme, "percentage_used"), _nested(smart, "nvme_smart_health_information_log", "percentage_used")),
             "available_spare_percent": _first(_nested(nvme, "avail_spare"), _nested(smart, "nvme_smart_health_information_log", "available_spare")),
-            "lifetime_remaining_percent": max(0, 100 - lifetime_used) if lifetime_used is not None else None,
         },
         usage={
             "power_on_hours": _first(_nested(nvme, "power_on_hours"), _nested(smart, "power_on_time", "hours"), _nested(smart, "nvme_smart_health_information_log", "power_on_hours")),
@@ -91,9 +74,6 @@ def normalize(
         errors={
             "media_errors": _first(_nested(nvme, "media_errors"), _nested(smart, "nvme_smart_health_information_log", "media_errors")),
             "unsafe_shutdowns": _first(_nested(nvme, "unsafe_shutdowns"), _nested(smart, "nvme_smart_health_information_log", "unsafe_shutdowns")),
-            "reallocated_nand_blocks": _ata_raw(smart, 5) if bx500 else None,
-            "reported_uncorrectable_errors": _ata_raw(smart, 187) if bx500 else None,
-            "interface_crc_errors": _ata_raw(smart, 199) if bx500 else None,
         },
         collection={
             "timestamp_utc": datetime.now(timezone.utc).isoformat(),

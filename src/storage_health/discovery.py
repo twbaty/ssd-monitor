@@ -52,6 +52,7 @@ def discover_linux(sys_block: Path = Path("/sys/class/block")) -> list[PhysicalD
                 sys_path=str(resolved),
                 major_minor=major_minor,
                 transport=transport,
+                stable_id=f"linux:{major_minor}",
             ),
         )
 

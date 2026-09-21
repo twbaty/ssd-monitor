@@ -50,21 +50,12 @@ def collect_smartctl(
     device: PhysicalDevice,
     runner: Runner = run,
     is_available: Callable[[str], bool] = available,
+    smart_path: str | None = None,
 ) -> tuple[dict[str, Any] | None, dict[str, Any]]:
     if not is_available("smartctl"):
         return None, {"source": "smartctl", "status": "unavailable"}
-    result = runner(["smartctl", "--all", "--json", device.path], 20)
+    result = runner(["smartctl", "--all", "--json", smart_path or device.path], 20)
     payload = result.json()
-    messages = payload.get("smartctl", {}).get("messages", []) if isinstance(payload, dict) else []
-    unknown_usb_bridge = any(
-        isinstance(message, dict) and "Unknown USB bridge" in message.get("string", "")
-        for message in messages
-    )
-    if unknown_usb_bridge:
-        fallback = runner(["smartctl", "--all", "--json", "-d", "scsi", device.path], 20)
-        fallback_payload = fallback.json()
-        if isinstance(fallback_payload, dict) and fallback_payload.get("smart_status") is not None:
-            result, payload = fallback, fallback_payload
     # smartctl returns a bitmask. Bits 0-2 indicate invocation, device-open,
     # or command failures; bits 3-7 describe disk-health findings and do not
     # mean collection itself failed.

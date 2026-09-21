@@ -27,22 +27,6 @@ class CollectorTests(unittest.TestCase):
 
         self.assertEqual(status["status"], "ok")
 
-    def test_unknown_usb_bridge_uses_scsi_health_fallback(self) -> None:
-        device = PhysicalDevice("sdb", "/dev/sdb", "/sys/devices/sdb", "8:16")
-        commands = []
-
-        def runner(command: list[str], timeout: int) -> CommandResult:
-            commands.append(command)
-            if "scsi" in command:
-                return CommandResult(command, 4, '{"device":{"protocol":"SCSI"},"smart_status":{"passed":true}}', "")
-            return CommandResult(command, 1, '{"smartctl":{"messages":[{"string":"Unknown USB bridge"}]}}', "")
-
-        payload, status = collect_smartctl(device, runner=runner, is_available=lambda _: True)
-
-        self.assertEqual(payload["smart_status"]["passed"], True)
-        self.assertEqual(status["status"], "partial")
-        self.assertEqual(commands[1], ["smartctl", "--all", "--json", "-d", "scsi", "/dev/sdb"])
-
 
 if __name__ == "__main__":
     unittest.main()

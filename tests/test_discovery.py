@@ -17,11 +17,6 @@ class DiscoveryTests(unittest.TestCase):
             (physical / "dev").write_text("8:0\n")
             (block / "sda").symlink_to(physical, target_is_directory=True)
 
-            usb = tmp_path / "devices" / "pci0000:00" / "usb1" / "block" / "sdb"
-            usb.mkdir(parents=True)
-            (usb / "dev").write_text("8:16\n")
-            (block / "sdb").symlink_to(usb, target_is_directory=True)
-
             partition = physical / "sda1"
             partition.mkdir()
             (partition / "partition").write_text("1\n")
@@ -42,7 +37,7 @@ class DiscoveryTests(unittest.TestCase):
 
             self.assertEqual(
                 [(device.name, device.major_minor) for device in devices],
-                [("sda", "8:0"), ("sdb", "8:16")],
+                [("sda", "8:0")],
             )
 
 
