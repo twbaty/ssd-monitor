@@ -144,7 +144,7 @@ def _string_list(value: Any) -> list[str]:
     return [cleaned for item in values if (cleaned := _clean(item))]
 
 
-def scan_windows(runner: Runner = run) -> list[TelemetryRecord]:
+def scan_windows(runner: Runner = run, native_only: bool = False) -> list[TelemetryRecord]:
     shell = _powershell()
     if not shell:
         raise RuntimeError("PowerShell is required for Windows disk discovery")
@@ -157,7 +157,10 @@ def scan_windows(runner: Runner = run) -> list[TelemetryRecord]:
 
     records: list[TelemetryRecord] = []
     for device, native, smart_path in parse_windows_disks(payload):
-        smart, smart_status = collect_smartctl(device, runner=runner, smart_path=smart_path)
+        if native_only:
+            smart, smart_status = None, {"source": "smartctl", "status": "disabled"}
+        else:
+            smart, smart_status = collect_smartctl(device, runner=runner, smart_path=smart_path)
         sources = [
             {"source": "windows-cim", "status": "ok"},
             smart_status,

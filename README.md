@@ -38,6 +38,13 @@ python -m pip install .
 sudo .venv/bin/storage-health scan --json
 ```
 
+To verify or require dependency-free operation, disable every optional external
+provider:
+
+```bash
+storage-health scan --json --native-only
+```
+
 Run the test suite without additional test dependencies:
 
 ```bash

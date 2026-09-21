@@ -13,6 +13,11 @@ def _parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
     scan = subparsers.add_parser("scan", help="scan physical storage devices")
     scan.add_argument("--json", action="store_true", help="emit normalized JSON")
+    scan.add_argument(
+        "--native-only",
+        action="store_true",
+        help="use only operating-system telemetry; disable optional external providers",
+    )
     return parser
 
 
@@ -21,7 +26,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command != "scan":
         return 2
     try:
-        records = [record.to_dict() for record in scan()]
+        records = [record.to_dict() for record in scan(native_only=args.native_only)]
     except RuntimeError as exc:
         print(f"storage-health: {exc}", file=sys.stderr)
         return 2
