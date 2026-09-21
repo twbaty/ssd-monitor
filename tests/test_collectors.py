@@ -1,11 +1,23 @@
 import unittest
+from pathlib import Path
 
-from storage_health.collectors import collect_smartctl
+from storage_health.collectors import collect_smartctl, resolve_smartctl
 from storage_health.command import CommandResult
 from storage_health.models import PhysicalDevice
 
 
 class CollectorTests(unittest.TestCase):
+    def test_finds_standard_windows_smartctl_install(self) -> None:
+        expected = Path("C:/Program Files/smartmontools/bin/smartctl.exe")
+
+        resolved = resolve_smartctl(
+            is_available=lambda _: False,
+            environ={"ProgramFiles": "C:/Program Files"},
+            path_exists=lambda path: path == expected,
+        )
+
+        self.assertEqual(resolved, str(expected))
+
     def test_smartctl_device_error_with_json_is_partial(self) -> None:
         device = PhysicalDevice("sr0", "/dev/sr0", "/sys/devices/sr0", "11:0")
 

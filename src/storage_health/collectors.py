@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any, Callable
 
@@ -52,9 +53,10 @@ def collect_smartctl(
     is_available: Callable[[str], bool] = available,
     smart_path: str | None = None,
 ) -> tuple[dict[str, Any] | None, dict[str, Any]]:
-    if not is_available("smartctl"):
+    program = resolve_smartctl(is_available=is_available)
+    if not program:
         return None, {"source": "smartctl", "status": "unavailable"}
-    result = runner(["smartctl", "--all", "--json", smart_path or device.path], 20)
+    result = runner([program, "--all", "--json", smart_path or device.path], 20)
     payload = result.json()
     # smartctl returns a bitmask. Bits 0-2 indicate invocation, device-open,
     # or command failures; bits 3-7 describe disk-health findings and do not
@@ -71,6 +73,21 @@ def collect_smartctl(
         "exit_code": result.returncode,
         "message": result.stderr.strip() or None,
     }
+
+
+def resolve_smartctl(
+    is_available: Callable[[str], bool] = available,
+    environ: dict[str, str] | None = None,
+    path_exists: Callable[[Path], bool] = Path.is_file,
+) -> str | None:
+    if is_available("smartctl"):
+        return "smartctl"
+    environment = os.environ if environ is None else environ
+    candidates = [
+        Path(environment.get("ProgramFiles", "")) / "smartmontools" / "bin" / "smartctl.exe",
+        Path(environment.get("ProgramFiles(x86)", "")) / "smartmontools" / "bin" / "smartctl.exe",
+    ]
+    return next((str(path) for path in candidates if str(path.parent) != "." and path_exists(path)), None)
 
 
 def collect_nvme(

@@ -36,7 +36,10 @@ def normalize(
     smart_temp = _nested(smart, "temperature", "current")
     nvme_temp = _first(_nested(nvme, "temperature"), _nested(nvme, "composite_temperature"))
     passed = _nested(smart, "smart_status", "passed")
-    critical_warning = _nested(nvme, "critical_warning")
+    critical_warning = _first(
+        _nested(nvme, "critical_warning"),
+        _nested(smart, "nvme_smart_health_information_log", "critical_warning"),
+    )
     smart_protocol = _nested(smart, "device", "protocol")
     if isinstance(smart_protocol, str):
         smart_protocol = smart_protocol.lower()

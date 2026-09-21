@@ -28,6 +28,18 @@ class NormalizationTests(unittest.TestCase):
         self.assertIsNone(record["health"]["smart_passed"])
         self.assertIsNone(record["usage"]["power_on_hours"])
 
+    def test_reads_nvme_critical_warning_from_smartctl(self) -> None:
+        device = PhysicalDevice("nvme0n1", "/dev/nvme0n1", "/sys/devices/nvme0n1", "259:0")
+        record = normalize(
+            device,
+            {},
+            {"nvme_smart_health_information_log": {"critical_warning": 0}},
+            None,
+            [{"source": "smartctl", "status": "ok"}],
+        ).to_dict()
+
+        self.assertEqual(record["health"]["nvme_critical_warning"], 0)
+
     def test_prefers_smart_identity_and_temperature(self) -> None:
         device = PhysicalDevice("sda", "/dev/sda", "/sys/devices/sda", "8:0")
         record = normalize(
