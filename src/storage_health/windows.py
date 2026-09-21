@@ -89,7 +89,7 @@ def parse_windows_disks(payload: Any) -> list[tuple[PhysicalDevice, dict[str, An
             "native_status": {
                 "status": item.get("Status"),
                 "health": item.get("HealthStatus"),
-                "operational": item.get("OperationalStatus") or [],
+                "operational": _string_list(item.get("OperationalStatus")),
             },
         }
         disks.append((device, native, f"/dev/pd{index}"))
@@ -101,6 +101,13 @@ def _clean(value: Any) -> str | None:
         return None
     cleaned = str(value).strip()
     return cleaned or None
+
+
+def _string_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+    values = value if isinstance(value, list) else [value]
+    return [cleaned for item in values if (cleaned := _clean(item))]
 
 
 def scan_windows(runner: Runner = run) -> list[TelemetryRecord]:
@@ -120,7 +127,7 @@ def scan_windows(runner: Runner = run) -> list[TelemetryRecord]:
         sources = [
             {"source": "windows-cim", "status": "ok"},
             smart_status,
-            {"source": "nvme-cli", "status": "not_applicable"},
+            {"source": "nvme-cli", "status": "unsupported_on_platform"},
         ]
         records.append(normalize(device, native, smart, None, sources))
     return records

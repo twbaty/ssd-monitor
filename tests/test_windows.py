@@ -31,7 +31,19 @@ class WindowsDiscoveryTests(unittest.TestCase):
         self.assertEqual(native["serial"], "SERIAL-1")
         self.assertFalse(native["rotational"])
         self.assertEqual(native["native_status"]["health"], "Healthy")
+        self.assertEqual(native["native_status"]["operational"], ["OK"])
         self.assertEqual(smart_path, "/dev/pd0")
+
+    def test_normalizes_single_operational_status_to_list(self) -> None:
+        payload = {
+            "Index": 1,
+            "DeviceID": r"\\.\PHYSICALDRIVE1",
+            "OperationalStatus": "OK",
+        }
+
+        _, native, _ = parse_windows_disks(payload)[0]
+
+        self.assertEqual(native["native_status"]["operational"], ["OK"])
 
 
 if __name__ == "__main__":
