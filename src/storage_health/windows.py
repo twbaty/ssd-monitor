@@ -18,6 +18,10 @@ Get-PhysicalDisk -ErrorAction SilentlyContinue | ForEach-Object {
 }
 Get-CimInstance Win32_DiskDrive | ForEach-Object {
   $p = $physical[[string]$_.Index]
+  $r = $null
+  if ($p) {
+    try { $r = $p | Get-StorageReliabilityCounter -ErrorAction Stop } catch {}
+  }
   [pscustomobject]@{
     Index = $_.Index
     DeviceID = $_.DeviceID
@@ -32,6 +36,15 @@ Get-CimInstance Win32_DiskDrive | ForEach-Object {
     MediaType = if ($p) { [string]$p.MediaType } else { [string]$_.MediaType }
     HealthStatus = if ($p) { [string]$p.HealthStatus } else { $null }
     OperationalStatus = if ($p) { @($p.OperationalStatus | ForEach-Object { [string]$_ }) } else { @() }
+    Temperature = if ($r) { $r.Temperature } else { $null }
+    TemperatureMax = if ($r) { $r.TemperatureMax } else { $null }
+    Wear = if ($r) { $r.Wear } else { $null }
+    PowerOnHours = if ($r) { $r.PowerOnHours } else { $null }
+    ReadErrorsTotal = if ($r) { $r.ReadErrorsTotal } else { $null }
+    WriteErrorsTotal = if ($r) { $r.WriteErrorsTotal } else { $null }
+    ReadErrorsCorrected = if ($r) { $r.ReadErrorsCorrected } else { $null }
+    WriteErrorsCorrected = if ($r) { $r.WriteErrorsCorrected } else { $null }
+    StartStopCycleCount = if ($r) { $r.StartStopCycleCount } else { $null }
   }
 } | ConvertTo-Json -Depth 4 -Compress
 """.strip()
@@ -86,6 +99,15 @@ def parse_windows_disks(payload: Any) -> list[tuple[PhysicalDevice, dict[str, An
             "firmware": _clean(item.get("FirmwareRevision")),
             "rotational": rotational,
             "size_bytes": size_bytes,
+            "temperature_celsius": _number(item.get("Temperature")),
+            "temperature_max_celsius": _number(item.get("TemperatureMax")),
+            "percentage_used": _number(item.get("Wear")),
+            "power_on_hours": _number(item.get("PowerOnHours")),
+            "read_errors_total": _number(item.get("ReadErrorsTotal")),
+            "write_errors_total": _number(item.get("WriteErrorsTotal")),
+            "read_errors_corrected": _number(item.get("ReadErrorsCorrected")),
+            "write_errors_corrected": _number(item.get("WriteErrorsCorrected")),
+            "start_stop_cycles": _number(item.get("StartStopCycleCount")),
             "native_status": {
                 "status": item.get("Status"),
                 "health": item.get("HealthStatus"),
@@ -101,6 +123,18 @@ def _clean(value: Any) -> str | None:
         return None
     cleaned = str(value).strip()
     return cleaned or None
+
+
+def _number(value: Any) -> int | float | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return value
+    try:
+        parsed = float(str(value))
+    except ValueError:
+        return None
+    return int(parsed) if parsed.is_integer() else parsed
 
 
 def _string_list(value: Any) -> list[str]:
