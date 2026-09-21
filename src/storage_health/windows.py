@@ -7,6 +7,7 @@ from .collectors import collect_smartctl
 from .command import CommandResult, available, run
 from .models import PhysicalDevice, TelemetryRecord
 from .normalize import normalize
+from .windows_nvme import query_nvme_health
 
 Runner = Callable[[list[str], int], CommandResult]
 
@@ -157,14 +158,20 @@ def scan_windows(runner: Runner = run, native_only: bool = False) -> list[Teleme
 
     records: list[TelemetryRecord] = []
     for device, native, smart_path in parse_windows_disks(payload):
+        if device.transport == "nvme":
+            native_nvme, native_nvme_status = query_nvme_health(device.path)
+        else:
+            native_nvme = None
+            native_nvme_status = {"source": "windows-nvme", "status": "not_applicable"}
         if native_only:
             smart, smart_status = None, {"source": "smartctl", "status": "disabled"}
         else:
             smart, smart_status = collect_smartctl(device, runner=runner, smart_path=smart_path)
         sources = [
             {"source": "windows-cim", "status": "ok"},
+            native_nvme_status,
             smart_status,
             {"source": "nvme-cli", "status": "unsupported_on_platform"},
         ]
-        records.append(normalize(device, native, smart, None, sources))
+        records.append(normalize(device, native, smart, native_nvme, sources))
     return records

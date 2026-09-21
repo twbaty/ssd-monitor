@@ -22,8 +22,9 @@ Linux telemetry proof of concept implemented.
 
 ## Run it
 
-Requires Python 3.10 or newer. Windows uses native CIM, Storage Management, and
-storage reliability counters. Linux uses sysfs for native discovery.
+Requires Python 3.10 or newer. Windows uses native CIM, Storage Management,
+storage reliability counters, and direct NVMe protocol queries through
+`DeviceIoControl`. Linux uses sysfs for native discovery.
 `smartmontools` and Linux `nvme-cli` are optional enrichment/fallback providers;
 the application does not require either tool to run.
 
